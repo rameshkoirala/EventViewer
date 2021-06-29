@@ -1,4 +1,4 @@
-This event-viewer is written to view various properties of cosmic ray extensive air showers detected by the GRAND.
+This event-viewer package is written to view various properties of cosmic ray extensive air showers detected by the GRAND.
 "holoviews" python package is used to create this event-viewer. It uses 'bokeh' and 'matplotlib' as a base for visualization and creating widget.
 
 Needs python 3.6 or higher.
