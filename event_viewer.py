@@ -64,6 +64,7 @@ class EventViewer:
 
 	def get_data(self):
 		# Collect information of an event required to make plots in event-display.
+		# This method is called everytime a new data file is given as an input.
 		self.run_info   = hdf5io.GetRunInfo(self.hdffile)
 		event_num       = hdf5io.GetNumberOfEvents(self.run_info)-1
 		self.eventname  = hdf5io.GetEventName(self.run_info,event_num)
@@ -95,13 +96,13 @@ class EventViewer:
 		self.hitY       = np.array([(self.geo_df[self.geo_df.ID.eq(ant_name)]['Y']).values[0] for ant_name in self.hitAnt])
 		self.hitZ       = np.array([(self.geo_df[self.geo_df.ID.eq(ant_name)]['Z']).values[0] for ant_name in self.hitAnt])
 		# Position of hit antannae from shower core.
-		self.hitXc      = sorted_antInfo['X']          #x-coordinate of hit antenna from shower core. Used to plot kXB, kX(kXB), K plot.
-		self.hitYc      = sorted_antInfo['Y']          #y-coordinate of hit antenna from shower core. Used to plot kXB, kX(kXB), K plot.
-		self.hitZc      = sorted_antInfo['Z']          #z-coordinate of hit antenna from shower core. Used to plot kXB, kX(kXB), K plot.		
-		# Position of shower core in GRAND sc.
+		self.hitXc      = sorted_antInfo['X']         #x-coordinate of hit antenna from shower core. Used to plot kXB, kX(kXB), K plot.
+		self.hitYc      = sorted_antInfo['Y']         #y-coordinate of hit antenna from shower core. Used to plot kXB, kX(kXB), K plot.
+		self.hitZc      = sorted_antInfo['Z']         #z-coordinate of hit antenna from shower core. Used to plot kXB, kX(kXB), K plot.		
+		# Position of shower core in GRAND cs.
 		self.corex     = (self.hitX-self.hitXc)[0]    #x-coordinate of shower core in GRAND cs. Not used.
 		self.corey     = (self.hitY-self.hitYc)[0]    #y-coordinate of shower core in GRAND cs. Not used.
-		#self.corez     = (self.hitZ-self.hitZc)[0]    #y-coordinate of shower core in GRAND cs. Not used.
+		#self.corez     = (self.hitZ-self.hitZc)[0]   #z-coordinate of shower core in GRAND cs. Not used.
 		self.hitT       = sorted_antInfo['T0']
 		self.peakA      = sorted_antInfo['peakamplitude']
 		# More info related to the shower.
@@ -133,9 +134,11 @@ class EventViewer:
 			
 			# plot traces
 			curvex = hv.Curve(efield[:,1], 'Time Bins', 'E-field Trace', label='Ex')\
-						.opts(line_width=lw, tools=['hover'], xlabel='', alpha=alp, color='r')
-			curvey = hv.Curve(efield[:,2], 'Time Bins', 'E-field Trace', label='Ey').opts(line_width=lw, tools=['hover'], xlabel='', alpha=alp, color='steelblue')
-			curvez = hv.Curve(efield[:,3], 'Time Bins', 'E-field Trace', label='Ez').opts(line_width=lw, tools=['hover'], xlabel='', alpha=alp, color='olive')
+					.opts(line_width=lw, tools=['hover'], xlabel='', alpha=alp, color='r')
+			curvey = hv.Curve(efield[:,2], 'Time Bins', 'E-field Trace', label='Ey')\
+					.opts(line_width=lw, tools=['hover'], xlabel='', alpha=alp, color='steelblue')
+			curvez = hv.Curve(efield[:,3], 'Time Bins', 'E-field Trace', label='Ez')\
+					.opts(line_width=lw, tools=['hover'], xlabel='', alpha=alp, color='olive')
 			curve  = curvex*curvey*curvez
 			ymin = min([min(efield[:,1]), min(efield[:,2]), min(efield[:,3])])
 			ymin = ymin - .05*abs(ymin)
@@ -150,9 +153,12 @@ class EventViewer:
 			tcurve[i] = curve
 
 			# plot hilbert transform
-			curvexh = hv.Curve(hilbert_amp[0,:], 'Time Bins', 'E-field [μV/m]').opts(color='r', alpha=alp-0.1, line_width=lw, tools=['hover']) #line_dash='dotted', 
-			curveyh = hv.Curve(hilbert_amp[1,:], 'Time Bins', 'E-field [μV/m]').opts(color='steelblue', alpha=alp, line_width=lw, tools=['hover'])
-			curvezh = hv.Curve(hilbert_amp[2,:], 'Time Bins', 'E-field [μV/m]').opts(color='olive', alpha=alp, line_width=lw, tools=['hover'])
+			curvexh = hv.Curve(hilbert_amp[0,:], 'Time Bins', 'E-field [μV/m]')\
+					.opts(line_width=lw, tools=['hover'], alpha=alp-0.1, color='r') #line_dash='dotted', 
+			curveyh = hv.Curve(hilbert_amp[1,:], 'Time Bins', 'E-field [μV/m]')\
+					.opts(line_width=lw, tools=['hover'], alpha=alp, color='steelblue')
+			curvezh = hv.Curve(hilbert_amp[2,:], 'Time Bins', 'E-field [μV/m]')\
+					.opts(line_width=lw, tools=['hover'], alpha=alp, color='olive')
 
 			curve_h  = curvexh*curveyh*curvezh
 			ymin_h = min([min(hilbert_amp[0,:]), min(hilbert_amp[1,:]), min(hilbert_amp[2,:])])
@@ -186,7 +192,7 @@ class EventViewer:
 
 		antEtrace = self.trace_collection[index[0]]  #index here is a list with 1 entry.
 		antEtrace.opts(width=side_width, height=side_height, show_grid=True,
-					   fontsize={'title':16, 'labels':13, 'legend':8, 'xticks':10, 'yticks': 10})
+			fontsize={'title':16, 'labels':13, 'legend':8, 'xticks':10, 'yticks': 10})
 
 		return antEtrace
 
@@ -206,7 +212,7 @@ class EventViewer:
 
 		antEtrace_h = self.hilbert_collection[index[0]]  #index here is a list with 1 entry.
 		antEtrace_h.opts(width=side_width, height=side_height, show_grid=True,
-					   	 fontsize={'title':10, 'labels':13, 'legend':8, 'xticks':10, 'yticks': 10})
+			fontsize={'title':10, 'labels':13, 'legend':8, 'xticks':10, 'yticks': 10})
 
 		return antEtrace_h
 
@@ -214,13 +220,13 @@ class EventViewer:
 		# Print basic shower information on the display.
 		# To Do: Extend this to include experimental events.
 		quantity = ['Particle','Ene [EeV]','Zen [deg]','Azi [deg]','BInc [deg]', 'BDec [deg]', 'Xmax [g/cm2]']
-		value    = [  self.primary, 
-	        		  round(self.energy,2),
-	        		  round(np.rad2deg(self.zenith),2),
-	        		  round(np.rad2deg(self.azimuth),2),
-	                  round(np.rad2deg(self.bFieldIncl)-90.,2),
-	                  round(-1*np.rad2deg(self.bFieldDecl),2),
-	                  round(self.slant_xmax, 2)]
+		value    = [self.primary, 
+	        		round(self.energy,2),
+	        		round(np.rad2deg(self.zenith),2),
+	        		round(np.rad2deg(self.azimuth),2),
+	                round(np.rad2deg(self.bFieldIncl)-90.,2),
+	                round(-1*np.rad2deg(self.bFieldDecl),2),
+	                round(self.slant_xmax, 2)]
 
 		text = {'Quantity': quantity, 'Value': value}
 		df   = pd.DataFrame(text, columns = ['Quantity', 'Value'])
@@ -233,21 +239,22 @@ class EventViewer:
 		# plot interpolated peak amplitude in ground plane.
 		X, Y = np.meshgrid(np.linspace(self.hitX.min(), self.hitY.max(), 60), 
 						   np.linspace(self.hitY.min(), self.hitY.max(), 60))
-		inter_peakamp_grd = scipolate.Rbf(self.hitX, self.hitY, self.peakamplitude, 
-										  function='linear', epsilon=9)(X, Y) #function='thin_plate
+		inter_peakamp_grd = scipolate.Rbf(self.hitX, self.hitY, self.peakamplitude, function='linear', epsilon=9)(X, Y) #function='thin_plate'
 		kdims  = ['x_gp', 'y_gp']
 		vdims  = ['peakA']
 		bounds = (self.hitX.min()/1.e3, self.hitY.min()/1.e3, 
 				  self.hitX.max()/1.e3, self.hitY.max()/1.e3)
 		#np.flipud(data) is performed inside Image. So it is done here to undo that process. If not done, the image will be upside down.
-		plot_cc = hv.Image(np.flipud(inter_peakamp_grd), kdims=kdims, vdims=vdims, bounds=bounds).opts(width=img_width, height=img_height,
-										 cmap='Spectral_r',
-										 title='Ground Plane [km]',
-										 xlabel='',
-										 ylabel='',
-										 tools=['hover'],
-										 toolbar='below',
-										 fontsize={'title': 10, 'labels': 11, 'xticks': 10, 'yticks': 10})
+		plot_cc = hv.Image(np.flipud(inter_peakamp_grd), kdims=kdims, vdims=vdims, bounds=bounds)  \
+					.opts(width = img_width, 
+						height  = img_height,
+						cmap    = 'Spectral_r',
+						title   = 'Ground Plane [km]',
+						xlabel  = '',
+						ylabel  = '',
+						tools   = ['hover'],
+						toolbar = 'below',
+						fontsize= {'title': 10, 'labels': 11, 'xticks': 10, 'yticks': 10})
 		return plot_cc
 
 	def peak_amplitude_shower_plane(self,data):
@@ -276,17 +283,18 @@ class EventViewer:
 		bounds  = (xmin, ymin, xmax, ymax)
 		lmax = max([xmax-xmin, ymax-ymin])
 		#np.flipud(data) is performed inside Image. So it is done here to undo that process. If not done, the image will be upside down.
-		plot_cc = hv.Image(np.flipud(inter_peakamp), kdims=kdims, vdims=vdims, 
-					       bounds=bounds).opts(width=img_width, height=img_height,
-												cmap='Spectral_r',
-												title='Shower Plane',
-												xlabel='vxB [km]',
-												ylabel='vx(vxB) [km]',
-										 		xlim=(xmin-0.005*lmax,xmin+1.005*lmax), # this is for equal aspect ratio.
-										 		ylim=(ymin-0.005*lmax,ymin+1.005*lmax), # this is for equal aspect ratio.
-												tools=['hover'],
-												toolbar='below',
-												fontsize={'title': 10, 'labels': 11, 'xticks': 10, 'yticks': 10})
+		plot_cc = hv.Image(np.flipud(inter_peakamp), kdims=kdims, vdims=vdims, bounds=bounds) \
+					.opts(width = img_width, 
+						height  = img_height,
+						cmap    = 'Spectral_r',
+						title   = 'Shower Plane',
+						xlabel  = 'vxB [km]',
+						ylabel  = 'vx(vxB) [km]',
+						xlim    = (xmin-0.005*lmax,xmin+1.005*lmax), # this is for equal aspect ratio.
+						ylim    = (ymin-0.005*lmax,ymin+1.005*lmax), # this is for equal aspect ratio.
+						tools   = ['hover'],
+						toolbar = 'below',
+						fontsize= {'title': 10, 'labels': 11, 'xticks': 10, 'yticks': 10})
 		return plot_cc
 
 	def peak_amplitude_angular_plane(self,data):
@@ -327,16 +335,18 @@ class EventViewer:
 		bounds  = (xmin, ymin, xmax, ymax)
 		lmax = max([self.x_angular.max()-self.x_angular.min(), self.y_angular.max()-self.y_angular.min()])
 		#np.flipud(data) is performed inside Image. So it is done here to undo that process. If not done, the image will be upside down.
-		plot_cc = hv.Image(np.flipud(inter_peakamp), kdims=kdims, vdims=vdims, bounds=bounds).opts(width=img_width, height=img_height,
-										 cmap='Spectral_r',
-										 title='Angular Plane',
-										 xlabel='ω along vxB [deg]',
-										 ylabel='ω along vx(vxB) [deg]',
-								 		xlim=(xmin-0.005*lmax,xmin+1.005*lmax), # this is for equal aspect ratio.
-								 		ylim=(ymin-0.005*lmax,ymin+1.005*lmax), # this is for equal aspect ratio.
-										 tools=['hover'],
-										 toolbar='below',
-										 fontsize={'title': 10, 'labels': 11, 'xticks': 10, 'yticks': 10})
+		plot_cc = hv.Image(np.flipud(inter_peakamp), kdims=kdims, vdims=vdims, bounds=bounds)   \
+					.opts(width = img_width, 
+						height  = img_height,
+						cmap    = 'Spectral_r',
+						title   = 'Angular Plane',
+						xlabel  = 'ω along vxB [deg]',
+						ylabel  = 'ω along vx(vxB) [deg]',
+						xlim    = (xmin-0.005*lmax,xmin+1.005*lmax), # this is for equal aspect ratio.
+						ylim    = (ymin-0.005*lmax,ymin+1.005*lmax), # this is for equal aspect ratio.
+						tools   = ['hover'],
+						toolbar = 'below',
+						fontsize= {'title': 10, 'labels': 11, 'xticks': 10, 'yticks': 10})
 		return plot_cc
 
 	def peak_cerenkov_angle(self,data):
@@ -357,11 +367,12 @@ class EventViewer:
 		plot_ca = plot_ca1*plot_ca2
 		'''
 		x_omega = np.rad2deg(self.w)*np.sign(self.y_sp)
-		plot_ca = hv.Points(np.column_stack((x_omega, self.peakA)), kdims=kdims).opts(#width=img_width, height=img_height,
-										 color='k', alpha=0.9,
-										 tools=['hover'],
-										 size=4
-										 )
+		plot_ca = hv.Points(np.column_stack((x_omega, self.peakA)), kdims=kdims) \
+					.opts(#width=img_width, height=img_height,
+						color = 'k', 
+						alpha = 0.9,
+						tools = ['hover'],
+						size  = 4)
 
 		#xmin = min([min(self.x_angular), min(self.y_angular)]) - 0.1
 		#xmax = max([max(self.x_angular), max(self.y_angular)]) + 0.1
@@ -369,16 +380,15 @@ class EventViewer:
 		xmax = max(x_omega) + 0.1
 		ymin = min(self.peakA) * 1.05
 		ymax = max(self.peakA) * 1.05
-		plot_ca.opts(legend_position='bottom_right', 
-					 legend_cols=3,
-					 toolbar='below',
-					 show_grid=True,
-					 xlabel=r'ω [deg]',
-					 ylabel='Peak Amp [μV/m]',
-					 xlim=(xmin,xmax),
-					 ylim=(ymin,ymax),
-					 fontsize={'title': 9, 'labels': 11, 'legend':7, 'xticks': 10, 'yticks': 8}
-					 )
+		plot_ca.opts(
+			legend_position='bottom_right', 
+			legend_cols = 3,
+			toolbar     = 'below',
+			show_grid   = True,
+			xlabel      = 'ω [deg]',
+			ylabel      = 'Peak Amp [μV/m]',
+			xlim        = (xmin,xmax),
+			ylim        = (ymin,ymax))
 																						
 		return plot_ca
 
@@ -476,22 +486,21 @@ class EventViewer:
 		self.get_trace()   # get updated electric field traces and hilbert envelop.
 
 		# -------- Plot detector geometry with all antennae position ---------
-		antpos        = np.column_stack((self.posx, self.posy))
-		antposplot    = hv.Points(antpos, kdims=['X','Y'])#.opts(fontsize={'xticks': 10, 'yticks': 10})
+		antpos       = np.column_stack((self.posx, self.posy))
+		antposplot   = hv.Points(antpos, kdims=['X','Y'])#.opts(fontsize={'xticks': 10, 'yticks': 10})
 		antposplot.opts(opts.Points(width=main_width,
-									height=main_height,
-									color='black',
-									fill_color='black',
-									alpha=0.2,
-									fill_alpha=0.2,
-									marker='circle',
-									size=8,
-									tools=['hover'],
-									xlabel='South-North [km]', 
-									ylabel='East-West [km]',
-									toolbar='above',
-									fontsize={'title': 20, 'labels': 18, 'xticks': 12, 'yticks': 12}
-								))
+			height   = main_height,
+			marker   = 'circle',
+			size     = 8,
+			tools    = ['hover'],
+			xlabel   = 'South-North [km]', 
+			ylabel   = 'East-West [km]',
+			toolbar  = 'above',
+			color    = 'black',
+			alpha    = 0.2,
+			fill_color = 'black',
+			fill_alpha = 0.2,
+			fontsize = {'title': 20, 'labels': 18, 'xticks': 12, 'yticks': 12}))
 
 		# --------- Play/Pause botton. ------------------#
 		self.play_button   = pn.widgets.Button(name='▶ Play', width=80, align='end')
