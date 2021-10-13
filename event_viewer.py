@@ -140,10 +140,12 @@ class EventViewer:
 			curvez = hv.Curve(efield[:,3], 'Time Bins', 'E-field Trace', label='Ez')\
 					.opts(line_width=lw, tools=['hover'], xlabel='', alpha=alp, color='olive')
 			curve  = curvex*curvey*curvez
+
 			ymin = min([min(efield[:,1]), min(efield[:,2]), min(efield[:,3])])
 			ymin = ymin - .05*abs(ymin)
 			ymax = max([max(efield[:,1]), max(efield[:,2]), max(efield[:,3])])
 			ymax = ymax + .05*abs(ymax)
+
 			curve.opts(show_grid=True, title='Antenna: '+ant_id, 
 					   toolbar='above',
 					   xlim=(-1,len(efield[:,1])+1),
@@ -159,12 +161,13 @@ class EventViewer:
 					.opts(line_width=lw, tools=['hover'], alpha=alp, color='steelblue')
 			curvezh = hv.Curve(hilbert_amp[2,:], 'Time Bins', 'E-field [μV/m]')\
 					.opts(line_width=lw, tools=['hover'], alpha=alp, color='olive')
+			curve_h = curvexh*curveyh*curvezh
 
-			curve_h  = curvexh*curveyh*curvezh
 			ymin_h = min([min(hilbert_amp[0,:]), min(hilbert_amp[1,:]), min(hilbert_amp[2,:])])
 			ymax_h = max([max(hilbert_amp[0,:]), max(hilbert_amp[1,:]), max(hilbert_amp[2,:])])
 			ymin_h = ymin_h - .05*abs(ymax_h) # ymin is always 0.
 			ymax_h = ymax_h + .05*abs(ymax_h)
+
 			curve_h.opts(title='Hilbert Envelope',
 						 show_grid=True, 
 						 xlim=(-1,len(hilbert_amp[0,:])+1),
@@ -274,15 +277,17 @@ class EventViewer:
 		inter_peakamp = scipolate.Rbf(self.x_sp, self.y_sp, self.peakamplitude, 
 									  function='thin_plate', epsilon=9)(Xsp, Ysp) #linear
 
-		kdims   = ['x_sp', 'y_sp']
-		vdims   = ['peakA']
-		xmin    = self.x_sp.min()/1.e3
-		xmax    = self.x_sp.max()/1.e3
-		ymin    = self.y_sp.min()/1.e3
-		ymax    = self.y_sp.max()/1.e3
-		bounds  = (xmin, ymin, xmax, ymax)
-		lmax = max([xmax-xmin, ymax-ymin])
-		#np.flipud(data) is performed inside Image. So it is done here to undo that process. If not done, the image will be upside down.
+		kdims  = ['x_sp', 'y_sp']
+		vdims  = ['peakA']
+		xmin   = self.x_sp.min()/1.e3
+		xmax   = self.x_sp.max()/1.e3
+		ymin   = self.y_sp.min()/1.e3
+		ymax   = self.y_sp.max()/1.e3
+		bounds = (xmin, ymin, xmax, ymax)
+		lmax   = max([xmax-xmin, ymax-ymin])
+		
+		# np.flipud(data) is performed inside hv.Image. So it is done here to undo that process. 
+		# If not done, the image will be upside down.
 		plot_cc = hv.Image(np.flipud(inter_peakamp), kdims=kdims, vdims=vdims, bounds=bounds) \
 					.opts(width = img_width, 
 						height  = img_height,
