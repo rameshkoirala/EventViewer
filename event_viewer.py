@@ -132,9 +132,10 @@ class EventViewer:
 			hilbert_amp = np.abs(hilbert(efield_filt[1:4,:]))
 			
 			# plot traces
-			curvex = hv.Curve(efield[:,1], 'Time Bins', 'E-field Trace', label='Ex').opts(color='r', alpha=alp, line_width=lw, tools=['hover'], xlabel='')
-			curvey = hv.Curve(efield[:,2], 'Time Bins', 'E-field Trace', label='Ey').opts(color='steelblue', alpha=alp, line_width=lw, tools=['hover'], xlabel='')
-			curvez = hv.Curve(efield[:,3], 'Time Bins', 'E-field Trace', label='Ez').opts(color='olive', alpha=alp, line_width=lw, tools=['hover'], xlabel='')
+			curvex = hv.Curve(efield[:,1], 'Time Bins', 'E-field Trace', label='Ex')\
+						.opts(line_width=lw, tools=['hover'], xlabel='', alpha=alp, color='r')
+			curvey = hv.Curve(efield[:,2], 'Time Bins', 'E-field Trace', label='Ey').opts(line_width=lw, tools=['hover'], xlabel='', alpha=alp, color='steelblue')
+			curvez = hv.Curve(efield[:,3], 'Time Bins', 'E-field Trace', label='Ez').opts(line_width=lw, tools=['hover'], xlabel='', alpha=alp, color='olive')
 			curve  = curvex*curvey*curvez
 			ymin = min([min(efield[:,1]), min(efield[:,2]), min(efield[:,3])])
 			ymin = ymin - .05*abs(ymin)
