@@ -55,8 +55,12 @@ class EventViewer:
 		# Get layout of proposed geometry of GP300.
 		self.geo_df  = pd.read_csv(self.geofile, sep=" ", usecols=[1,2,3,4])
 		self.geo_df['ID'] = np.array([str(ant_name) for ant_name in self.geo_df['ID']]) # sometimes int are used as ID.
-		self.posx    = self.geo_df['X']/1.e3     # x-coordinate of all antenna
-		self.posy    = self.geo_df['Y']/1.e3     # y-coordinate of all antenna
+		self.posx    = self.geo_df['X']/1.e3     # x-coordinate of all antenna in km.
+		self.posy    = self.geo_df['Y']/1.e3     # y-coordinate of all antenna in km.
+		'''
+		For 3D:
+		self.posz    = self.geo_df['Z']/1.e3     # z-coordinate of all antenna in km.
+		'''
 
 	def get_data(self):
 		# Collect information of an event required to make plots in event-display.
@@ -66,10 +70,10 @@ class EventViewer:
 		self.event_info = hdf5io.GetEventInfo(self.hdffile, self.eventname)
 		self.ant_info   = hdf5io.GetAntennaInfo(self.hdffile, self.eventname)
 		# filtered peak time and peak amplitude calculated after hilbert transform.
-		self.peaktime, self.peakamplitude = mix.get_filtered_peakAmpTime_Hilbert(self.hdffile, 
-																				 self.eventname, 
-																				 self.ant_info, 
-																				 self.fmin, self.fmax)		
+		self.peaktime, self.peakamplitude = mix.get_filtered_peakAmpTime_Hilbert(self.hdffile,
+			self.eventname, 
+			self.ant_info,
+			self.fmin, self.fmax)		
 		self.ant_info['peakamplitude']= self.peakamplitude
 		sorted_indx     = self.ant_info.argsort('T0')          # index based on increasing time.
 		sorted_antInfo  = self.ant_info[sorted_indx]
