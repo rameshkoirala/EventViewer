@@ -1,0 +1,27 @@
+
+# Open GitHub Account
+	Tutorial: https://docs.gitlab.com/ee/topics/git/how_to_install_git/index.html
+
+# Install 'git' on your computer
+	1. Install Homebrew if you do not have it. For macOS and Linux:
+		$ /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+	2. Install git:
+		$ brew install git
+		$ git --version
+
+# Tutorial on how to use GitHub:		
+	Tutorial: https://product.hubspot.com/blog/git-and-github-tutorial-for-beginners
+
+# Install EventViewer using git:
+	$ git clone https://github.com/rameshkoirala/EventViewer.git
+	$ cd EventViewer
+	$ git init               # to initialize git on EventViewer directory.
+	$ git status             # check status of git. To see if anything has been modified.
+
+	# Now create your own branch to work on. You can do whatever you want with this branch. Completely erase it if you want.
+		$ git checkout -b EV_Ramesh             # replace my name with your name.
+		$ git add GitHub_instructions.txt       # As a test, try adding this file to your EV branch.
+		$ git commit -m "a brief message about your file"
+		$ git push -u origin EV_Ramesh          # This is very important and make sure you do not push it to master branch.
+
+	# Check EventViewer GitHub repository in website and see your changes.
