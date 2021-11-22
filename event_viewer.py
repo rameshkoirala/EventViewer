@@ -115,7 +115,7 @@ class EventViewer:
 		self.x_xmax, self.y_xmax, self.z_xmax = hdf5io.GetXmaxPosition(self.event_info).data[0]
 		self.slant_xmax = hdf5io.GetEventSlantXmax(self.run_info, event_num)
 		# additional info.
-		self.palette_color = color_pallette(len(self.hitX))
+		self.palette_color = self.select_color()
 		self.tbins         = np.arange(min(self.hitT)-2*self.tstep, max(self.hitT)+2*self.tstep, self.tstep) # time boundary to look for hits.
 		self.nhits         = len(self.hitX)
 
@@ -419,6 +419,10 @@ class EventViewer:
 					self.get_trace()   # get electric field traces from a new input hdf file.
 					self.stream_ring.send(data=[]) # sending nothing, just calling to replot with updated data.
 					
+				if self.choose_color.value != self.select_color():
+					self.get_data()
+					self.stream_ring.send(data=[])
+					
 			indx      = 0
 			# loop over all hits and send data via pipe to plot one by one.
 			while indx<len(self.tbins):
@@ -477,18 +481,27 @@ class EventViewer:
 		return fig
 
 	def plot_core(self, data):
+		# ToDo: Do not plot core of the default event at the beginning.
 		return hv.Points((self.corex/1.e3, self.corey/1.e3)).opts(color='k', marker='star_dot', size=25)
+		
+	def select_color(self):
+		self.color_pallete = sns.palettes.color_palette(self.choose_color.value, len(self.hitX)).as_hex()
+		return self.color_pallete                	
+
 
 	def view(self):
 		# This is the driving function. All necessary process are called and managed from here.
 		# Updating hits plot dynamically is done from here.
+		
+		# --------------Choose color ----------------
+		self.choose_color = pn.widgets.Select(options=color_options, value='copper_r')
 
 		# ----------- Browse event file to display -------------
 		self.input_file = pn.widgets.FileInput(accept='.hdf5, .root')
 		self.input_file.filename = self.hdffile
 		self.get_geometry()# get updated position of antennae, (i.e. posx, posy)
 		self.get_data()    # get updated hitAnt, hitX, hitY, hitT etc...
-		self.get_trace()   # get updated electric field traces and hilbert envelop.
+		self.get_trace()   # get updated electric field traces and hilbert envelop.		
 
 		# -------- Plot detector geometry with all antennae position ---------
 		antpos       = np.column_stack((self.posx, self.posy))
@@ -548,6 +561,7 @@ class EventViewer:
 		layout = pn.GridSpec(width=1500, height=main_height)#, sizing_mode='stretch_both')
 		layout[0:5, 0:7]  = self.play_button        # "play" butoon
 		layout[0:5, 7:50] = self.input_file         # "Browse" button
+		layout[0:5,51:70] = self.choose_color       # "choose color" button
 		layout[6:th,0:dw] = self.dmap               # main event display
 		layout[0:eh, dw:dw+ew] = self.antEtrace        # Electric field traces
 		layout[eh:2*eh, dw:dw+ew] = self.antEtrace_h   # Hilbert envelop
@@ -574,10 +588,9 @@ if __name__=='__main__':
 	
 	from scipy.signal import hilbert
 	import scipy.interpolate as scipolate
-	import mix                                   # functions wrtten by Valentin Decoene.
+	import mix                          # functions wrtten by Valentin Decoene.
+	import seaborn as sns               # used for color pallettes.
 
-	from bokeh.palettes import inferno, magma, viridis, gray, plasma, turbo
-	color_pallette = plasma
 
 	hv.extension('bokeh', 'matplotlib')
 	hv.plotting.mpl.MPLPlot.fig_latex=True
@@ -613,5 +626,53 @@ if __name__=='__main__':
 	img_width   = 380 # width of side kXB, kX(kXB) image.
 	img_height  = 300 # height of side kXB, kX(kXB) image.
 
+	color_options = ['Blues', 'Reds', 'RdBu_r', 'RdYlBu_r', 
+					 'RdYlGn_r', 'Wistia', 'YlGn', 'YlGnBu', 
+					 'autumn_r', 'cividis_r', 'coolwarm', 
+					 'copper_r', 'gist_earth_r', 'gnuplot_r', 
+					 'magma_r', 'mako_r', 'plasma_r', 'rainbow',
+					 'seismic', 'summer_r', 'spring', 'terrain_r', 'turbo', 
+					 'viridis_r', 'vlag', 'winter_r', 'colorblind']
+
+	# all options
+	'''color_options = ['Accent', 'Accent_r','Blues','Blues_r','BrBG','BrBG_r','BuGn',
+					 'BuGn_r','BuPu','BuPu_r','CMRmap','CMRmap_r','Dark2','Dark2_r',
+					 'GnBu','GnBu_r','Greens','Greens_r','Greys','Greys_r','OrRd',
+					 'OrRd_r','Oranges','Oranges_r','PRGn','PRGn_r','Paired','Paired_r',
+					 'Pastel1','Pastel1_r','Pastel2','Pastel2_r','PiYG','PiYG_r','PuBu',
+					 'PuBuGn','PuBuGn_r','PuBu_r','PuOr','PuOr_r','PuRd','PuRd_r','Purples',
+					 'Purples_r','RdBu','RdBu_r','RdGy','RdGy_r','RdPu','RdPu_r',
+					 'RdYlBu','RdYlBu_r','RdYlGn','RdYlGn_r','Reds','Reds_r','Set1','Set1_r',
+					 'Set2','Set2_r','Set3','Set3_r','Spectral','Spectral_r','Wistia',
+					 'Wistia_r','YlGn','YlGnBu','YlGnBu_r','YlGn_r','YlOrBr','YlOrBr_r',
+					 'YlOrRd','YlOrRd_r','afmhot','afmhot_r','autumn','autumn_r','binary',
+					 'binary_r','bone','bone_r','brg','brg_r','bwr','bwr_r','cividis','cividis_r',
+					 'cool','cool_r','coolwarm','coolwarm_r','copper','copper_r','cubehelix',
+					 'cubehelix_r','flag','flag_r','gist_earth','gist_earth_r','gist_gray',
+					 'gist_gray_r','gist_heat','gist_heat_r','gist_ncar','gist_ncar_r',
+					 'gist_rainbow','gist_rainbow_r','gist_stern','gist_stern_r','gist_yarg',
+					 'gist_yarg_r','gnuplot','gnuplot2','gnuplot2_r','gnuplot_r','gray','gray_r',
+					 'hot','hot_r','hsv','hsv_r','icefire','icefire_r','inferno','inferno_r',
+					 'magma','magma_r','mako','mako_r','nipy_spectral','nipy_spectral_r',
+					 'ocean','ocean_r','pink','pink_r','plasma','plasma_r','prism','prism_r',
+					 'rainbow','rainbow_r','rocket','rocket_r','seismic','seismic_r','spring',
+					 'spring_r','summer','summer_r','tab10','tab10_r','tab20','tab20_r','tab20b',
+					 'tab20b_r','tab20c','tab20c_r','terrain','terrain_r','turbo','turbo_r',
+					 'twilight','twilight_r','twilight_shifted','twilight_shifted_r','viridis',
+					 'viridis_r','vlag','vlag_r','winter','winter_r']
+
+	# To see how these color pallettes look, Run this code (ipython)
+	import seaborn as sns
+	import matplotlib.pyplot as plt
+	for item in colrs:
+		print(item)
+        current_palette = sns.color_palette(item, 100)
+        sns.palplot(current_palette)
+        plt.title(item)
+        plt.show()
+	'''
 	eventviewer = EventViewer()
 	eventviewer.view()
+
+
+#
