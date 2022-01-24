@@ -43,13 +43,13 @@ class EventViewer:
 	$ pip3 install bokeh
 		# Instruction: https://docs.bokeh.org/en/latest/
 	"""
-
 	def __init__(self):
 		self.geofile = geofile
 		self.hdffile = hdffile
 		self.tstep   = 1500   # time step to look for antennae begin hit. If this time is short, event formation on viewer will take longer.
 		self.fmin    = 50.e6  # minimum radio frequency in hertz.
 		self.fmax    = 200.e6 # maximum radio frequency in hertz.
+		self.plt_core = False
 
 	def get_geometry(self):
 		# Get layout of proposed geometry of GP300.
@@ -115,7 +115,7 @@ class EventViewer:
 		self.x_xmax, self.y_xmax, self.z_xmax = hdf5io.GetXmaxPosition(self.event_info).data[0]
 		self.slant_xmax = hdf5io.GetEventSlantXmax(self.run_info, event_num)
 		# additional info.
-		self.palette_color = color_pallette(len(self.hitX))
+		self.palette_color = self.select_color()
 		self.tbins         = np.arange(min(self.hitT)-2*self.tstep, max(self.hitT)+2*self.tstep, self.tstep) # time boundary to look for hits.
 		self.nhits         = len(self.hitX)
 
@@ -240,8 +240,8 @@ class EventViewer:
 
 	def peak_amplitude_ground_plane(self,data):
 		# plot interpolated peak amplitude in ground plane.
-		X, Y = np.meshgrid(np.linspace(self.hitX.min(), self.hitY.max(), 60), 
-						   np.linspace(self.hitY.min(), self.hitY.max(), 60))
+		X, Y = np.meshgrid(np.linspace(self.hitX.min(), self.hitY.max(), 200), 
+						   np.linspace(self.hitY.min(), self.hitY.max(), 200))
 		inter_peakamp_grd = scipolate.Rbf(self.hitX, self.hitY, self.peakamplitude, function='linear', epsilon=9)(X, Y) #function='thin_plate'
 		kdims  = ['x_gp', 'y_gp']
 		vdims  = ['peakA']
@@ -272,8 +272,8 @@ class EventViewer:
 													  			  self.k_shower, 
 													  			  np.array([0,0,np.mean(self.hitZ)]), # z-value is not on the ground.
 													  			  self.bFieldIncl, self.bFieldDecl)
-		Xsp, Ysp = np.meshgrid(np.linspace(self.x_sp.min(), self.x_sp.max(), 60), 
-							   np.linspace(self.y_sp.min(), self.y_sp.max(), 60))
+		Xsp, Ysp = np.meshgrid(np.linspace(self.x_sp.min(), self.x_sp.max(), 200), 
+							   np.linspace(self.y_sp.min(), self.y_sp.max(), 200))
 		inter_peakamp = scipolate.Rbf(self.x_sp, self.y_sp, self.peakamplitude, 
 									  function='thin_plate', epsilon=9)(Xsp, Ysp) #linear
 
@@ -324,8 +324,8 @@ class EventViewer:
 		self.x_angular = np.rad2deg(self.w)*np.cos(eta)
 		self.y_angular = np.rad2deg(self.w)*np.sin(eta)
 
-		Xang, Yang = np.meshgrid(np.linspace(self.x_angular.min(), self.x_angular.max(), 60), 
-							     np.linspace(self.y_angular.min(), self.y_angular.max(), 60))
+		Xang, Yang = np.meshgrid(np.linspace(self.x_angular.min(), self.x_angular.max(), 200), 
+							     np.linspace(self.y_angular.min(), self.y_angular.max(), 200)) #60
 		inter_peakamp = scipolate.Rbf(self.x_angular, self.y_angular, self.peakamplitude, 
 									  function='linear', epsilon=9)(Xang, Yang) #function='quintic'
 
@@ -404,36 +404,43 @@ class EventViewer:
 		if self.play_button.name == '▶ Play':
 			self.play_button.name = '❚❚ Pause'
 			# Check if the input file name has been changed. If changed start plotting the new event after 'Play' button is clicked.
-			filename0  = self.input_file.filename				
-			if filename0!=None:
-				findex0   = np.where('/'==np.array([i for i in filename0]))[0]
-				if len(findex0)!=0:
-					filename = datadir + filename0[findex0[-1]+1:]
-				else:
-					filename = datadir + filename0
-
-				if filename!=self.hdffile:
-					# if a new hdf file is provided, then start from the beginning.
-					self.hdffile       = filename
-					self.get_data()    # get hitX, hitY, ..., tbins etc for a new input hdf file.
-					self.get_trace()   # get electric field traces from a new input hdf file.
-					self.stream_ring.send(data=[]) # sending nothing, just calling to replot with updated data.
-					
-			indx      = 0
-			# loop over all hits and send data via pipe to plot one by one.
-			while indx<len(self.tbins):
-				# It is faster to plot and hit-evolution looks smooth if hits are binned in time steps.
-				mask = self.hitT<=self.tbins[indx]
-				x    = np.array(self.hitX)[mask]           # select x-coordinate of hit antennae before a given time.
-				y    = np.array(self.hitY)[mask]           # select y-coordinate of hit antennae before a given time.
-				t    = np.array(self.hitT)[mask]           # select list of time before the boundary time.
-				wt   = np.array(self.Eweight)[mask]        # Weight based on peak amplitude. This is an adhoc weight and has no physical meaning.
-				color = np.array(self.palette_color)[mask] # select color from a palette that was created based on time of hit.
-				self.stream_hits.send((x,y,t,wt,color))    # tunnel hits info to a dynamic map.
-				indx+= 1
-
-			# After all hits are plotted, change the 'Pause' button to 'Play'.
-			self.play_button.name = '▶ Play'
+			filename0  = self.input_file.filename	
+			try:			
+				if filename0!=None:
+					findex0   = np.where('/'==np.array([i for i in filename0]))[0]
+					if len(findex0)!=0:
+						filename = datadir + filename0[findex0[-1]+1:]
+					else:
+						filename = datadir + filename0
+					if filename!=self.hdffile:
+						# if a new hdf file is provided, then start from the beginning.
+						self.hdffile       = filename
+						self.get_data()    # get hitX, hitY, ..., tbins etc for a new input hdf file.
+						self.get_trace()   # get electric field traces from a new input hdf file.
+						self.stream_ring.send(data=[]) # sending nothing, just calling to replot with updated data.
+						
+					if self.choose_color.value != self.select_color():
+						self.get_data()
+						self.stream_ring.send(data=[])
+				self.plt_core = True
+				indx      = 0
+				# loop over all hits and send data via pipe to plot one by one.
+				while indx<len(self.tbins):
+					# It is faster to plot and hit-evolution looks smooth if hits are binned in time steps.
+					mask = self.hitT<=self.tbins[indx]
+					x    = np.array(self.hitX)[mask]           # select x-coordinate of hit antennae before a given time.
+					y    = np.array(self.hitY)[mask]           # select y-coordinate of hit antennae before a given time.
+					t    = np.array(self.hitT)[mask]           # select list of time before the boundary time.
+					wt   = np.array(self.Eweight)[mask]        # Weight based on peak amplitude. This is an adhoc weight and has no physical meaning.
+					color = np.array(self.palette_color)[mask] # select color from a palette that was created based on time of hit.
+					self.stream_hits.send((x,y,t,wt,color))    # tunnel hits info to a dynamic map.
+					indx+= 1
+				# Show play button after an event is displayed.
+				self.play_button.name = '▶ Play'
+			except:
+				# After all hits are plotted, change the 'Pause' button to 'Play'.
+				print("ERROR: Choose a file to display event.")
+				self.play_button.name = '▶ Play'
 
 	def plot_hits(self,data):
 		"""
@@ -477,18 +484,30 @@ class EventViewer:
 		return fig
 
 	def plot_core(self, data):
-		return hv.Points((self.corex/1.e3, self.corey/1.e3)).opts(color='k', marker='star_dot', size=25)
+		if self.plt_core:
+			return hv.Points((self.corex/1.e3, self.corey/1.e3)).opts(color='k', marker='star_dot', size=25)
+		else:
+			return hv.Points([]).opts(color='k', marker='star_dot', size=25)
+			
+			
+	def select_color(self):
+		self.color_pallete = sns.palettes.color_palette(self.choose_color.value, len(self.hitX)).as_hex()
+		return self.color_pallete                	
+
 
 	def view(self):
 		# This is the driving function. All necessary process are called and managed from here.
 		# Updating hits plot dynamically is done from here.
+		
+		# --------------Choose color ----------------
+		self.choose_color = pn.widgets.Select(options=color_options, value='copper_r')
 
 		# ----------- Browse event file to display -------------
 		self.input_file = pn.widgets.FileInput(accept='.hdf5, .root')
 		self.input_file.filename = self.hdffile
 		self.get_geometry()# get updated position of antennae, (i.e. posx, posy)
 		self.get_data()    # get updated hitAnt, hitX, hitY, hitT etc...
-		self.get_trace()   # get updated electric field traces and hilbert envelop.
+		self.get_trace()   # get updated electric field traces and hilbert envelop.		
 
 		# -------- Plot detector geometry with all antennae position ---------
 		antpos       = np.column_stack((self.posx, self.posy))
@@ -511,13 +530,12 @@ class EventViewer:
 		self.play_button   = pn.widgets.Button(name='▶ Play', width=80, align='end')
 		self.play_button.on_click(self.animate)
 		self.stream_ring  = hv.streams.Pipe(data=[]) #data is predefined variable in hv and it has to be supplied. To do: find neat way to do this.
-
 		# --------- Evolution of hits based on time ------------------
 		self.stream_hits  = hv.streams.Pipe(data=[[],[],[],[],[]])
 		dmap_hits_plot    = hv.DynamicMap(self.plot_hits, streams=[self.stream_hits])
 		dmap_hits_plot.opts(opts.Points(tools=['tap', 'hover'])) # tap hits antenna to plot its electric field traces.
-		pcore = hv.DynamicMap(self.plot_core, streams=[self.stream_ring])
-		self.dmap         = antposplot*dmap_hits_plot*pcore            # plot GP300 geometry and dynamic map of hits on the same canvas.
+		pcore             = hv.DynamicMap(self.plot_core, streams=[self.stream_hits])
+		self.dmap         = antposplot*dmap_hits_plot*pcore      # plot GP300 geometry and dynamic map of hits on the same canvas.
 		
 		# --------------Click on antennae with signal to view it's E-field trace ---------------------------
 		stream_click      = hv.streams.Selection1D(source=dmap_hits_plot, index=[int(self.nhits/2)])
@@ -548,6 +566,7 @@ class EventViewer:
 		layout = pn.GridSpec(width=1500, height=main_height)#, sizing_mode='stretch_both')
 		layout[0:5, 0:7]  = self.play_button        # "play" butoon
 		layout[0:5, 7:50] = self.input_file         # "Browse" button
+		layout[0:5,51:70] = self.choose_color       # "choose color" button
 		layout[6:th,0:dw] = self.dmap               # main event display
 		layout[0:eh, dw:dw+ew] = self.antEtrace        # Electric field traces
 		layout[eh:2*eh, dw:dw+ew] = self.antEtrace_h   # Hilbert envelop
@@ -556,6 +575,9 @@ class EventViewer:
 		layout[2*eh+3:th, dw:dw+w2+3] = self.cerenkov_sp
 		layout[2*eh+3:th, dw+w2+3:dw+4+2*w2] = self.cerenkov_ap
 		layout[2*eh+3:th, dw+4+2*w2:tw] = self.cerenkov_ang
+		#layout[2*eh+3:th, dw:dw+w2+3] = self.cerenkov_grd
+		#layout[2*eh+3:th, dw+w2+3:dw+4+2*w2] = self.cerenkov_sp
+		#layout[2*eh+3:th, dw+4+2*w2:tw] = self.cerenkov_ap
 
 		layout.show()
 
@@ -574,10 +596,8 @@ if __name__=='__main__':
 	
 	from scipy.signal import hilbert
 	import scipy.interpolate as scipolate
-	import mix                                   # functions wrtten by Valentin Decoene.
-
-	from bokeh.palettes import inferno, magma, viridis, gray, plasma, turbo
-	color_pallette = plasma
+	import mix                          # functions wrtten by Valentin Decoene.
+	import seaborn as sns               # used for color pallettes.
 
 	hv.extension('bokeh', 'matplotlib')
 	hv.plotting.mpl.MPLPlot.fig_latex=True
@@ -613,5 +633,53 @@ if __name__=='__main__':
 	img_width   = 380 # width of side kXB, kX(kXB) image.
 	img_height  = 300 # height of side kXB, kX(kXB) image.
 
+	color_options = ['Blues', 'Reds', 'RdBu_r', 'RdYlBu_r', 
+					 'RdYlGn_r', 'Wistia', 'YlGn', 'YlGnBu', 
+					 'autumn_r', 'cividis_r', 'coolwarm', 
+					 'copper_r', 'gist_earth_r', 'gnuplot_r', 
+					 'magma_r', 'mako_r', 'plasma_r', 'rainbow',
+					 'seismic', 'summer_r', 'spring', 'terrain_r', 'turbo', 
+					 'viridis_r', 'vlag', 'winter_r', 'colorblind']
+
+	# all options
+	'''color_options = ['Accent', 'Accent_r','Blues','Blues_r','BrBG','BrBG_r','BuGn',
+					 'BuGn_r','BuPu','BuPu_r','CMRmap','CMRmap_r','Dark2','Dark2_r',
+					 'GnBu','GnBu_r','Greens','Greens_r','Greys','Greys_r','OrRd',
+					 'OrRd_r','Oranges','Oranges_r','PRGn','PRGn_r','Paired','Paired_r',
+					 'Pastel1','Pastel1_r','Pastel2','Pastel2_r','PiYG','PiYG_r','PuBu',
+					 'PuBuGn','PuBuGn_r','PuBu_r','PuOr','PuOr_r','PuRd','PuRd_r','Purples',
+					 'Purples_r','RdBu','RdBu_r','RdGy','RdGy_r','RdPu','RdPu_r',
+					 'RdYlBu','RdYlBu_r','RdYlGn','RdYlGn_r','Reds','Reds_r','Set1','Set1_r',
+					 'Set2','Set2_r','Set3','Set3_r','Spectral','Spectral_r','Wistia',
+					 'Wistia_r','YlGn','YlGnBu','YlGnBu_r','YlGn_r','YlOrBr','YlOrBr_r',
+					 'YlOrRd','YlOrRd_r','afmhot','afmhot_r','autumn','autumn_r','binary',
+					 'binary_r','bone','bone_r','brg','brg_r','bwr','bwr_r','cividis','cividis_r',
+					 'cool','cool_r','coolwarm','coolwarm_r','copper','copper_r','cubehelix',
+					 'cubehelix_r','flag','flag_r','gist_earth','gist_earth_r','gist_gray',
+					 'gist_gray_r','gist_heat','gist_heat_r','gist_ncar','gist_ncar_r',
+					 'gist_rainbow','gist_rainbow_r','gist_stern','gist_stern_r','gist_yarg',
+					 'gist_yarg_r','gnuplot','gnuplot2','gnuplot2_r','gnuplot_r','gray','gray_r',
+					 'hot','hot_r','hsv','hsv_r','icefire','icefire_r','inferno','inferno_r',
+					 'magma','magma_r','mako','mako_r','nipy_spectral','nipy_spectral_r',
+					 'ocean','ocean_r','pink','pink_r','plasma','plasma_r','prism','prism_r',
+					 'rainbow','rainbow_r','rocket','rocket_r','seismic','seismic_r','spring',
+					 'spring_r','summer','summer_r','tab10','tab10_r','tab20','tab20_r','tab20b',
+					 'tab20b_r','tab20c','tab20c_r','terrain','terrain_r','turbo','turbo_r',
+					 'twilight','twilight_r','twilight_shifted','twilight_shifted_r','viridis',
+					 'viridis_r','vlag','vlag_r','winter','winter_r']
+
+	# To see how these color pallettes look, Run this code (ipython)
+	import seaborn as sns
+	import matplotlib.pyplot as plt
+	for item in color_options:
+		print(item)
+        current_palette = sns.color_palette(item, 100)
+        sns.palplot(current_palette)
+        plt.title(item)
+        plt.show()
+	'''
 	eventviewer = EventViewer()
 	eventviewer.view()
+
+
+#
